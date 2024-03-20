@@ -30,7 +30,7 @@ class StatusCodeError(Exception):
         if message:
             self.message = message
         else:
-            self.message = "status_code != 200"
+            self.message = 'status_code != 200'
 
     def __str__(self):
         return self.message
