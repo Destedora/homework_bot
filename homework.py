@@ -19,29 +19,19 @@ from settings import (
     TELEGRAM_CHAT_ID,
     TELEGRAM_TOKEN,
     RETRY_PERIOD,
-    REQUEST_PERIOD,
     ENDPOINT,
     HOMEWORK_VERDICTS,
     HEADERS
 )
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(filename)s - %(lineno)d - '
-           '%(funcName)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(stream=sys.stdout),
-        logging.FileHandler(filename=__file__ + '.log', encoding='utf-8')
-    ]
-)
 
 
 def check_tokens():
     """Проверка доступности переменных окружения."""
     if not all([TELEGRAM_TOKEN, PRACTICUM_TOKEN, TELEGRAM_CHAT_ID]):
         logger.critical('Отсутствуют обязательные переменные окружения')
-        raise EnvVarError()
+        raise EnvVarError
 
 
 def send_message(bot, message):
@@ -54,7 +44,7 @@ def send_message(bot, message):
         )
     except telegram.error.TelegramError as error:
         logger.error(f'Не удалось отправить сообщение: {error}')
-        raise SendException()
+        raise SendException
     logger.debug(f'Сообщение успешно отправлено: {message}')
 
 
@@ -68,24 +58,23 @@ def get_api_answer(timestamp):
             params={'from_date': timestamp},
         )
         if response.status_code != HTTPStatus.OK:
-            raise StatusCodeError()
+            raise StatusCodeError
         return response.json()
     except requests.exceptions.RequestException:
-        RequestError()
+        raise RequestError
 
 
 def check_response(response):
     """Проверяет ответ API на соответствие документации."""
     logger.debug('Проверяем ответ сервара')
     if not isinstance(response, dict):
-        logging.error('Должен возвращаться словарь dict')
         raise TypeError(
             f'Тип {type(response)} не соответствует'
             f' ожидаемому {type(dict())}'
         )
     homeworks = response.get('homeworks')
     if homeworks is None:
-        EmptyAPIAnswerError()
+        raise EmptyAPIAnswerError
     if not isinstance(homeworks, list):
         raise TypeError(
             f'Тип {type(response)} не соответствует'
@@ -115,7 +104,6 @@ def main():
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     old_status = None
-
     while True:
         try:
             answer = get_api_answer(timestamp)
@@ -129,12 +117,16 @@ def main():
             if old_status != new_status:
                 send_message(bot, new_status)
                 old_status = new_status
-            time.sleep(REQUEST_PERIOD)
-        except (StatusCodeError, RequestError) as error:
+        except (StatusCodeError, EmptyAPIAnswerError,
+                RequestError, TypeError,
+                KeyError, ValueError) as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message)
-        except (EmptyAPIAnswerError, KeyError, ValueError) as error:
-            message = f'Сбой в работе программы: {error}'
+            if message != old_status:
+                send_message(bot, message)
+                old_status = message
+        except Exception as error:
+            message = f'Непредвиденная ошибка: {error}'
             logger.error(message)
             if message != old_status:
                 send_message(bot, message)
@@ -144,4 +136,19 @@ def main():
 
 
 if __name__ == '__main__':
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(filename)s - %(lineno)d - '
+        '%(funcName)s - %(levelname)s - %(message)s'
+    )
+    stream_handler = logging.StreamHandler(
+        stream=sys.stdout
+    )
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    file_handler = logging.FileHandler(
+        filename=__file__ + '.log', encoding='utf-8'
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
     main()

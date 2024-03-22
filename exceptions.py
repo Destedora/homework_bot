@@ -1,62 +1,32 @@
-class EnvVarError(Exception):
+class MinorError(Exception):
+    """Базовый класс для несущественных ошибок."""
+    MESSAGE = None
+
+    def __init__(self):
+        message = self.MESSAGE
+        super().__init__(message)
+
+
+class EnvVarError(MinorError):
     """Исключение отсутствия переменных окружения."""
-
-    def __init__(self, message=None):
-        if message:
-            self.message = message
-        else:
-            self.message = 'Отсутсвуют переменные окружения'
-
-    def __str__(self):
-        return self.message
+    MESSAGE = 'Отсутсвуют переменные окружения'
 
 
-class SendException(Exception):
+class SendException(MinorError):
     """Ошибка, возникающая при неудачной отправке сообщения."""
-    def __init__(self, message=None):
-        if message:
-            self.message = message
-        else:
-            self.message = 'Ошибка отправки сообщения :('
-
-    def __str__(self):
-        return self.message
+    MESSAGE = 'Ошибка отправки сообщения :('
 
 
-class StatusCodeError(Exception):
+class StatusCodeError(MinorError):
     """Ошибка статуса ответа."""
-
-    def __init__(self, message=None):
-        if message:
-            self.message = message
-        else:
-            self.message = 'Status_code != 200'
-
-    def __str__(self):
-        return self.message
+    MESSAGE = 'Status_code != 200'
 
 
-class EmptyAPIAnswerError(Exception):
+class EmptyAPIAnswerError(MinorError):
     """Ошибка отсутствия ключа."""
-
-    def __init__(self, message=None):
-        if message:
-            self.message = message
-        else:
-            self.message = 'Неверное значение параметра "homeworks"'
-
-    def __str__(self):
-        return self.message
+    MESSAGE = 'Неверное значение параметра "homeworks"'
 
 
-class RequestError(Exception):
+class RequestError(MinorError):
     """Ошибка запроса."""
-
-    def __init__(self, message=None):
-        if message:
-            self.message = message
-        else:
-            self.message = 'Ошибка запроса к API'
-
-    def __str__(self):
-        return self.message
+    MESSAGE = 'Ошибка запроса к API'
